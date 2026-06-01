@@ -45,6 +45,10 @@ const createMinecraftContextMock = vi.fn()
 const persistSessionMessagesMock = vi.fn()
 const forkSessionMock = vi.fn()
 const ensureSessionMock = vi.fn()
+const beginTurnMock = vi.fn()
+const applySignalsMock = vi.fn()
+const recordReplyTextMock = vi.fn()
+const clearActiveTurnMock = vi.fn()
 
 const activeSessionIdRef = ref('session-1')
 const streamingMessageRef = ref<any>({ role: 'assistant', content: '', slices: [], tool_results: [] })
@@ -144,6 +148,26 @@ vi.mock('./modules/artistry-autonomous', () => ({
   }),
 }))
 
+vi.mock('./modules/characterRuntime', () => ({
+  useCharacterRuntimeStore: () => ({
+    renderModel: ref({
+      presenceCue: null,
+      residue: null,
+      conversation: {
+        state: 'idle',
+        text: null,
+      },
+      delay: null,
+      silentTurn: null,
+      sceneMood: null,
+    }),
+    beginTurn: beginTurnMock,
+    applySignals: applySignalsMock,
+    recordReplyText: recordReplyTextMock,
+    clearActiveTurn: clearActiveTurnMock,
+  }),
+}))
+
 const provider = {
   chat: () => ({ baseURL: 'https://example.com/' }),
 } as unknown as ChatProvider
@@ -161,6 +185,10 @@ describe('chat orchestrator contract', () => {
     persistSessionMessagesMock.mockReset()
     forkSessionMock.mockReset()
     ensureSessionMock.mockReset()
+    beginTurnMock.mockReset()
+    applySignalsMock.mockReset()
+    recordReplyTextMock.mockReset()
+    clearActiveTurnMock.mockReset()
     ioTracerMocks.activeTurnSpan.value = undefined
     ioTracerMocks.spans.length = 0
     ioTracerMocks.startSpanMock.mockClear()

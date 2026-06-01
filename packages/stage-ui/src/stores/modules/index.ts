@@ -1,4 +1,5 @@
 export * from './airi-card'
+export * from './characterRuntime'
 export * from './consciousness'
 export * from './discord'
 export * from './gaming-factorio'

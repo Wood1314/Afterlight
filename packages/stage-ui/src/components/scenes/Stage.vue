@@ -38,7 +38,7 @@ import { useAudioContext, useSpeakingStore } from '../../stores/audio'
 import { useBackgroundStore } from '../../stores/background'
 import { useChatOrchestratorStore } from '../../stores/chat'
 import { useLlmStreamingControlStore } from '../../stores/llm-streaming-control'
-import { useAiriCardStore } from '../../stores/modules'
+import { useAiriCardStore, useCharacterRuntimeStore } from '../../stores/modules'
 import { useSpeechStore } from '../../stores/modules/speech'
 import { useProvidersStore } from '../../stores/providers'
 import { useSettings } from '../../stores/settings'
@@ -127,6 +127,8 @@ const live2dLipSync = ref<Live2DLipSync>()
 const live2dLipSyncOptions: Live2DLipSyncOptions = { mouthUpdateIntervalMs: 50, mouthLerpWindowMs: 50 }
 
 const { activeCard } = storeToRefs(useAiriCardStore())
+const characterRuntimeStore = useCharacterRuntimeStore()
+const { renderModel: characterRenderModel } = storeToRefs(characterRuntimeStore)
 const speechStore = useSpeechStore()
 const { ssmlEnabled, activeSpeechProvider, activeSpeechModel, activeSpeechVoice, pitch } = storeToRefs(speechStore)
 const activeCardId = computed(() => activeCard.value?.name ?? 'default')
@@ -135,6 +137,15 @@ const backgroundStore = useBackgroundStore()
 const { activeBackgroundUrl } = storeToRefs(backgroundStore)
 
 const { currentMotion } = storeToRefs(useLive2dParams())
+const stagePresenceTone = computed(() => {
+  if (characterRenderModel.value.silentTurn)
+    return characterRenderModel.value.silentTurn.text
+  if (characterRenderModel.value.delay)
+    return characterRenderModel.value.delay.text
+  if (characterRenderModel.value.presenceCue)
+    return characterRenderModel.value.presenceCue.text
+  return null
+})
 
 const emotionsQueue = createQueue<EmotionPayload>({
   handlers: [
@@ -671,10 +682,16 @@ chatHookCleanups.push(onBeforeMessageComposed(async () => {
 
 chatHookCleanups.push(onBeforeSend(async () => {
   currentMotion.value = { group: EmotionThinkMotionName }
+
+  if (characterRenderModel.value.delay || characterRenderModel.value.silentTurn)
+    return
 }))
 
 chatHookCleanups.push(onTokenLiteral(async (literal) => {
   currentSession?.appendText(literal)
+  if (characterRuntimeStore.currentTurnId) {
+    characterRuntimeStore.recordReplyText(characterRuntimeStore.currentTurnId, literal)
+  }
 }))
 
 chatHookCleanups.push(onTokenSpecial(async (special) => {
@@ -687,6 +704,7 @@ chatHookCleanups.push(onStreamEnd(async () => {
 
 chatHookCleanups.push(onAssistantResponseEnd(async (_message) => {
   currentSession?.end()
+  characterRuntimeStore.clearActiveTurn()
   // Streaming sessions null-out via the onDone hook; segmenter sessions
   // stay around until the next `onBeforeMessageComposed` cancels them
   // (the segmenter pipeline's IntentHandle.end is idempotent and
@@ -873,6 +891,68 @@ defineExpose({
     />
 
     <div relative h-full w-full>
+      <div
+        v-if="characterRenderModel.presenceCue || characterRenderModel.residue || characterRenderModel.delay || characterRenderModel.silentTurn"
+        :class="[
+          'pointer-events-none absolute left-4 top-4 z-20',
+          'max-w-88 w-[min(26rem,calc(100%-2rem))]',
+          'flex flex-col gap-2',
+        ]"
+        aria-live="polite"
+      >
+        <div
+          v-if="characterRenderModel.presenceCue"
+          :class="[
+            'rounded-4 px-4 py-3',
+            'border border-white/20',
+            'bg-black/35 text-white backdrop-blur-md',
+            characterRenderModel.presenceCue.intensity === 'noticeable'
+              ? 'shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_12px_30px_rgba(0,0,0,0.28)]'
+              : 'shadow-[0_8px_24px_rgba(0,0,0,0.18)]',
+          ]"
+        >
+          <div :class="['text-[11px] uppercase tracking-[0.22em] text-white/55']">
+            Presence
+          </div>
+          <div :class="['mt-1 text-sm leading-5 text-white/92']">
+            {{ characterRenderModel.presenceCue.text }}
+          </div>
+        </div>
+
+        <div
+          v-if="characterRenderModel.residue"
+          :class="[
+            'rounded-4 px-4 py-3',
+            'border border-white/12',
+            'bg-black/18 text-white/82 backdrop-blur-sm',
+          ]"
+        >
+          <div :class="['text-[11px] uppercase tracking-[0.2em] text-white/45']">
+            Residue
+          </div>
+          <div :class="['mt-1 text-sm leading-5']">
+            {{ characterRenderModel.residue.text }}
+          </div>
+        </div>
+
+        <div
+          v-if="characterRenderModel.delay || characterRenderModel.silentTurn"
+          :class="[
+            'rounded-4 px-4 py-3',
+            'border border-white/14',
+            'bg-white/10 text-white/88 backdrop-blur-md',
+          ]"
+          :aria-label="stagePresenceTone ?? undefined"
+        >
+          <div :class="['text-[11px] uppercase tracking-[0.2em] text-white/48']">
+            {{ characterRenderModel.delay ? 'Waiting' : 'Silence' }}
+          </div>
+          <div :class="['mt-1 text-sm leading-5']">
+            {{ stagePresenceTone }}
+          </div>
+        </div>
+      </div>
+
       <Live2DScene
         v-if="stageModelRenderer === 'live2d' && showStage"
         ref="live2dSceneRef"

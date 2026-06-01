@@ -13,6 +13,8 @@ import { ref, toRaw, watch } from 'vue'
 import { useAnalytics } from '../composables'
 import { activeTurnSpan, startSpan } from '../composables/use-io-tracer'
 import { extractMessageText, isCloudSyncableMessage } from '../libs/chat-sync'
+import { adaptCharacterRuntime } from '../libs/character-runtime/adapter'
+import { buildAfterglowContinuityPayload } from '../libs/providers/providers/afterglow'
 import { createMinecraftContext } from './chat/context-providers'
 import { useChatContextStore } from './chat/context-store'
 import { useChatSessionStore } from './chat/session-store'
@@ -22,6 +24,7 @@ import { useLLM } from './llm'
 import { useLlmToolsetPromptsStore } from './llm-toolset-prompts'
 import { useAiriCardStore } from './modules/airi-card'
 import { useAutonomousArtistryStore } from './modules/artistry-autonomous'
+import { useCharacterRuntimeStore } from './modules/characterRuntime'
 import { useConsciousnessStore } from './modules/consciousness'
 
 interface ForkOptions {
@@ -61,6 +64,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
   const chatSession = useChatSessionStore()
   const chatStream = useChatStreamStore()
   const chatContext = useChatContextStore()
+  const characterRuntime = useCharacterRuntimeStore()
   const cardStore = useAiriCardStore()
   const contextObservability = useContextObservabilityStore()
   const { activeSessionId } = storeToRefs(chatSession)
@@ -229,6 +233,16 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
     options: ChatOrchestratorSendOptions,
     targetSessionId?: string,
   ) {
+    const turnId = nanoid()
+    characterRuntime.beginTurn(turnId)
+
+    if (activeProvider.value === 'afterglow') {
+      characterRuntime.applySignals(adaptCharacterRuntime(buildAfterglowContinuityPayload({
+        turnId,
+        userText: sendingMessage,
+      })))
+    }
+
     return runtime.ingest(sendingMessage, options, targetSessionId)
   }
 
