@@ -26,8 +26,6 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { useSettingsLive2d } from '../../../../stage-ui-live2d/src/composables/live2d/live2d'
-import { useAuthProviderSync } from '../../composables/use-auth-provider-sync'
-import { useDuckDb } from '../../composables/use-duck-db'
 import { useIOTraceBridge } from '../../composables/use-io-trace-bridge'
 import { initIOTracer } from '../../composables/use-io-tracer'
 import { useSpeechPipelineAnalytics } from '../../composables/use-speech-pipeline-analytics'
@@ -54,8 +52,6 @@ const props = withDefaults(defineProps<{
 })
 
 const componentState = defineModel<'pending' | 'loading' | 'mounted'>('state', { default: 'pending' })
-
-const { getDb } = useDuckDb()
 // const transformersProvider = createTransformers({ embedWorkerURL })
 
 const vrmViewerRef = ref<InstanceType<typeof ThreeScene>>()
@@ -95,7 +91,6 @@ const chatHookCleanups: Array<() => void> = []
 //             cross-window broadcast wiring.
 
 const providersStore = useProvidersStore()
-useAuthProviderSync()
 const live2dStore = useLive2dParams()
 const showStage = ref(true)
 const viewUpdateCleanups: Array<() => void> = []
@@ -766,6 +761,24 @@ if (typeof window !== 'undefined') {
 }
 
 onMounted(async () => {
+  // NOTICE:
+  // Auth-driven provider bootstrapping is not required to construct the stage
+  // presence renderer itself. Importing it eagerly at module-evaluation time
+  // widens the browser-test dependency graph into provider/auth/i18n/server
+  // packages before Stage can mount. Keep it lazy so Stage presence tests only
+  // pay for this integration when the component is actually mounted in the app.
+  const { useAuthProviderSync } = await import('../../composables/use-auth-provider-sync')
+  useAuthProviderSync()
+
+  // NOTICE:
+  // Stage only uses DuckDB as an optional background capability probe here.
+  // Loading it eagerly at module-evaluation time pulls the DuckDB wasm worker
+  // bundle into browser tests and unrelated stage mounts, which fails before
+  // any stage presence logic runs. Keep the dependency behind a lazy import so
+  // the stage presence renderer and its tests remain independent from DuckDB
+  // asset resolution.
+  const { useDuckDb } = await import('../../composables/use-duck-db')
+  const { getDb } = useDuckDb()
   await getDb() // stub for future update
 })
 

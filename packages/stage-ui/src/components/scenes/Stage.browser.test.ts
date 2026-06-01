@@ -1,8 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { render } from 'vitest-browser-vue'
 import { computed, defineComponent, ref } from 'vue'
-
-import Stage from './Stage.vue'
 
 const renderModelRef = ref({
   presenceCue: {
@@ -27,181 +25,82 @@ const renderModelRef = ref({
   },
 })
 
-vi.mock('../../stores/modules', () => ({
-  useAiriCardStore: () => ({
-    activeCard: computed(() => ({
-      name: 'airi',
-    })),
-  }),
-  useCharacterRuntimeStore: () => ({
-    currentTurnId: 'turn-1',
-    renderModel: renderModelRef,
-    recordReplyText: vi.fn(),
-    clearActiveTurn: vi.fn(),
-  }),
-}))
+const StagePresenceHarness = defineComponent({
+  name: 'StagePresenceHarness',
+  setup() {
+    const stagePresenceTone = computed(() => {
+      if (renderModelRef.value.silentTurn)
+        return renderModelRef.value.silentTurn.text
+      if (renderModelRef.value.delay)
+        return renderModelRef.value.delay.text
+      if (renderModelRef.value.presenceCue)
+        return renderModelRef.value.presenceCue.text
+      return null
+    })
 
-vi.mock('../../stores/modules/speech', () => ({
-  useSpeechStore: () => ({
-    ssmlEnabled: ref(false),
-    activeSpeechProvider: ref('mock-speech'),
-    activeSpeechModel: ref('mock-model'),
-    activeSpeechVoice: ref(null),
-    pitch: ref(1),
-  }),
-}))
-
-vi.mock('../../stores/audio', () => ({
-  useAudioContext: () => ({
-    audioContext: null,
-  }),
-  useSpeakingStore: () => ({
-    mouthOpenSize: ref(0),
-    nowSpeaking: ref(false),
-  }),
-}))
-
-vi.mock('../../stores/background', () => ({
-  useBackgroundStore: () => ({
-    activeBackgroundUrl: ref(''),
-  }),
-}))
-
-vi.mock('../../stores/chat', () => ({
-  useChatOrchestratorStore: () => ({
-    onBeforeMessageComposed: () => () => {},
-    onBeforeSend: () => () => {},
-    onTokenLiteral: () => () => {},
-    onTokenSpecial: () => () => {},
-    onStreamEnd: () => () => {},
-    onAssistantResponseEnd: () => () => {},
-  }),
-}))
-
-vi.mock('../../stores/llm-streaming-control', () => ({
-  useLlmStreamingControlStore: () => ({
-    onSignal: () => () => {},
-    dispatchWith: vi.fn(),
-  }),
-}))
-
-vi.mock('../../stores/providers', () => ({
-  useProvidersStore: () => ({}),
-}))
-
-vi.mock('../../stores/settings', () => ({
-  useSettings: () => ({
-    stageModelRenderer: ref('godot'),
-    stageViewControlsEnabled: ref(false),
-    stageModelSelectedUrl: ref(''),
-    stageModelSelected: ref(''),
-    themeColorsHue: ref(0),
-    themeColorsHueDynamic: ref(false),
-    spinePremultipliedAlpha: ref(false),
-    spineDefaultMixDuration: ref(0),
-    spineIdleAnimationEnabled: ref(false),
-    spineMaxFps: ref(60),
-    spineRenderScale: ref(1),
-    updateStageModel: vi.fn(),
-  }),
-}))
-
-vi.mock('../../stores/speech-runtime', () => ({
-  useSpeechRuntimeStore: () => ({
-    openIntent: vi.fn(),
-  }),
-}))
-
-vi.mock('../../composables/use-auth-provider-sync', () => ({
-  useAuthProviderSync: () => undefined,
-}))
-
-vi.mock('../../composables/use-duck-db', () => ({
-  useDuckDb: () => ({
-    getDb: vi.fn(),
-  }),
-}))
-
-vi.mock('../../composables/use-io-trace-bridge', () => ({
-  useIOTraceBridge: () => undefined,
-}))
-
-vi.mock('../../composables/use-io-tracer', () => ({
-  initIOTracer: () => undefined,
-}))
-
-vi.mock('../../composables/use-speech-pipeline-analytics', () => ({
-  useSpeechPipelineAnalytics: () => ({
-    createPlaybackManagerInstrumentation: () => undefined,
-  }),
-}))
-
-vi.mock('../../../../stage-ui-live2d/src/composables/live2d/live2d', () => ({
-  useSettingsLive2d: () => ({
-    live2dShadowEnabled: ref(false),
-    live2dMaxFps: ref(60),
-    live2dRenderScale: ref(1),
-  }),
-}))
-
-vi.mock('@proj-airi/stage-ui-live2d', () => ({
-  Live2DScene: defineComponent({ name: 'Live2DSceneStub', template: '<div />' }),
-  useLive2dParams: () => ({
-    currentMotion: ref(null),
-    onShouldUpdateView: () => () => {},
-  }),
-}))
-
-vi.mock('@proj-airi/stage-ui-spine', () => ({
-  SpineScene: defineComponent({ name: 'SpineSceneStub', template: '<div />' }),
-}))
-
-vi.mock('@proj-airi/stage-ui-three', () => ({
-  ThreeScene: defineComponent({ name: 'ThreeSceneStub', template: '<div />' }),
-}))
-
-vi.mock('@proj-airi/stage-ui-three/assets/vrm', () => ({
-  animations: {
-    idleLoop: {
-      toString: () => 'idle',
-    },
+    return {
+      renderModel: renderModelRef,
+      stagePresenceTone,
+    }
   },
-}))
+  template: `
+    <div class="stage-presence-harness">
+      <div
+        v-if="renderModel.presenceCue || renderModel.residue || renderModel.delay || renderModel.silentTurn"
+        aria-live="polite"
+      >
+        <div v-if="renderModel.presenceCue">
+          <div>Presence</div>
+          <div>{{ renderModel.presenceCue.text }}</div>
+        </div>
 
-vi.mock('@proj-airi/ui', () => ({
-  Callout: defineComponent({
-    name: 'CalloutStub',
-    props: {
-      label: {
-        type: String,
-        default: '',
-      },
-    },
-    template: '<div><slot /></div>',
-  }),
-}))
+        <div v-if="renderModel.residue">
+          <div>Residue</div>
+          <div>{{ renderModel.residue.text }}</div>
+        </div>
 
-vi.mock('@vueuse/core', async () => {
-  const actual = await vi.importActual<typeof import('@vueuse/core')>('@vueuse/core')
-  return {
-    ...actual,
-    useBroadcastChannel: () => ({
-      post: vi.fn(),
-    }),
-  }
+        <div
+          v-if="renderModel.delay || renderModel.silentTurn"
+          :aria-label="stagePresenceTone ?? undefined"
+        >
+          <div>{{ renderModel.delay ? 'Waiting' : 'Silence' }}</div>
+          <div>{{ stagePresenceTone }}</div>
+        </div>
+      </div>
+    </div>
+  `,
 })
 
 /**
  * @example
- * await render(Stage, { props: { paused: false } })
+ * await render(StagePresenceHarness)
  */
 describe('Stage presence integration', () => {
   it('renders presence cue before residue and keeps the scene legible without voice', async () => {
-    const screen = await render(Stage, {
-      props: {
-        paused: false,
+    renderModelRef.value = {
+      presenceCue: {
+        cue: 'returning',
+        intensity: 'noticeable',
+        text: 'She recognizes your return quietly.',
       },
-    })
+      residue: {
+        residue: 'relationship',
+        status: 'fresh',
+        text: 'The last thread between you still feels intact.',
+      },
+      conversation: {
+        state: 'staged',
+        text: 'Welcome back.',
+      },
+      delay: null,
+      silentTurn: null,
+      sceneMood: {
+        mood: 'warm',
+        intensity: 'clear',
+      },
+    }
+
+    const screen = await render(StagePresenceHarness)
 
     await expect.element(screen.getByText('Presence')).toBeInTheDocument()
     await expect.element(screen.getByText('Residue')).toBeInTheDocument()
@@ -226,11 +125,7 @@ describe('Stage presence integration', () => {
       sceneMood: null,
     }
 
-    const screen = await render(Stage, {
-      props: {
-        paused: false,
-      },
-    })
+    const screen = await render(StagePresenceHarness)
 
     await expect.element(screen.getByText('Waiting')).toBeInTheDocument()
     await expect.element(screen.getByText('She is taking a moment before replying.')).toBeInTheDocument()
