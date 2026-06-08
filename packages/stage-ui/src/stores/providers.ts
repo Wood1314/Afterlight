@@ -217,6 +217,7 @@ export const useProvidersStore = defineStore('providers', () => {
   const providerCredentials = useLocalStorage<Record<string, Record<string, unknown>>>('settings/credentials/providers', {})
   const addedProviders = useLocalStorage<Record<string, boolean>>('settings/providers/added', {})
   const providerInstanceCache = ref<Record<string, unknown>>({})
+  const debugProviderLog = import.meta.env.DEV ? console.log.bind(console, '[provider-instance]') : () => {}
   const { t } = useI18n()
   const baseUrlValidator = computed(() => (baseUrl: unknown) => {
     let msg = ''
@@ -2661,8 +2662,10 @@ export const useProvidersStore = defineStore('providers', () => {
   | TranscriptionProviderWithExtraOptions,
   >(providerId: string): Promise<R> {
     const cached = providerInstanceCache.value[providerId] as R | undefined
-    if (cached)
+    if (cached) {
+      debugProviderLog(`cache-hit ${providerId}`)
       return cached
+    }
 
     const metadata = providerMetadata[providerId]
     if (!metadata)
@@ -2680,11 +2683,14 @@ export const useProvidersStore = defineStore('providers', () => {
       throw new Error(`Provider credentials for ${providerId} not found`)
 
     try {
+      debugProviderLog(`create:start ${providerId}`)
       const instance = await metadata.createProvider(config || {}) as R
       providerInstanceCache.value[providerId] = instance
+      debugProviderLog(`create:success ${providerId}`)
       return instance
     }
     catch (error) {
+      debugProviderLog(`create:error ${providerId} ${(error as Error).message}`)
       console.error(`Error creating provider instance for ${providerId}:`, error)
       throw error
     }

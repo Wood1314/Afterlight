@@ -388,8 +388,135 @@ pages:
     upload: 上传
     upload_desc: 点击或拖拽文件到此处上传
   memory:
-    description: 存放记忆的地方，以及策略
+    description: 配置历史聊天导入、Afterglow 记忆后端与 continuity 策略
     title: 记忆体
+    afterglow:
+      title: Afterglow Memory
+      description: 把 AIRI 作为角色外壳，把外部 Afterglow 作为历史聊天、persona、检索与关系记忆的后端核心。
+      alerts:
+        experimentalTitle: 这是外部记忆后端集成入口
+        experimentalDescription: 这里配置的是 AIRI 与外部 Afterglow backend 的连接、身份与检索策略。真正的 QQ / 微信导入、embedding、向量库和 persona 构建由外部 Afterglow 服务负责。
+      integration:
+        title: 服务接入
+        plugins:
+          auto: 自动识别导入格式
+          wechat: 微信 WeFlow (arkme-json)
+          qq: QQChatExporter V5
+        relationshipTypes:
+          lover: 恋人
+          friend: 朋友
+          family: 家人
+          colleague: 同事
+          custom: 自定义
+        fields:
+          serviceEnabled:
+            label: 启用 Afterglow 外部后端
+            description: 让 AIRI 通过单独运行的 Afterglow backend 来承载历史聊天导入、persona、memory 检索与语气模仿。
+          serviceBaseUrl:
+            label: Afterglow 服务地址
+            description: 外部 Afterglow backend 的 base URL，例如 `http://127.0.0.1:8000`。
+          serviceApiKey:
+            label: Afterglow 服务 API Key
+            description: 仅保存在本地，用于访问外部 Afterglow backend。
+          importPlugin:
+            label: 历史聊天导入格式
+            description: 指定外部 Afterglow 在导入聊天记录时使用哪种解析插件；不确定时使用自动识别。
+      identity:
+        title: 关系与身份
+        fields:
+          selfName:
+            label: 你的名字
+            description: 发送到 Afterglow 后端，用于 persona 与对话关系建模。
+          friendName:
+            label: 对方名字
+            description: 也就是你希望 Live2D 角色最终模仿其语气和人格的那个人。
+          selfUid:
+            label: 你的平台 UID
+            description: 对微信通常是 `wxid_xxx`；如果跨平台/多账号，后续可扩展成逗号分隔。
+          friendUid:
+            label: 对方平台 UID
+            description: 对微信通常是导出 JSON 里的 `wxid_xxx`。Afterglow 用它识别谁是被模仿对象。
+          relationshipType:
+            label: 关系类型
+            description: 影响 persona 模板和回复时的关系语气。
+          relationshipDescription:
+            label: 自定义关系描述
+            description: 当关系类型为“自定义”时，补充更准确的关系说明。
+      retrieval:
+        title: 检索与记忆策略
+        fields:
+          retrievalTopK:
+            label: 最终检索上下文数
+            description: 控制外部 Afterglow 在每轮对话时最多向主模型注入多少条候选记忆上下文。
+            value: '{count} 条'
+          responsePairTopK:
+            label: response pair 检索数
+            description: 控制“你说过什么 -> 她怎么回”的配对记忆在检索中的占比。
+            value: '{count} 条'
+          importIncludeAiGenerated:
+            label: 允许纳入 AI 生成记忆
+            description: 对应 Afterglow 的 `AI_GENERATED_LONG_TERM_ENABLED` 方向；开启后，后续 AI 自己生成的回复也可能进入长期记忆轨迹。
+      importer:
+        title: 聊天记录导入
+        detectedFormat: 识别格式：{format}
+        detectedMessages: 识别消息数：{count}
+        useAsSelf: 设为我
+        useAsFriend: 设为对方
+        taskId: 导入任务：{id}
+        taskStatus: 当前状态：{status}
+        taskProgress: 当前进度：{progress}
+        runtimeHints:
+          waitingForEmbedding: 导入任务已经发到 Afterglow backend，但远端记忆库还没有增长。通常意味着外部 backend 的 Embedding / OpenAI 配置还没补齐，或者导入仍在向量化阶段。
+          personaNotReady: 远端服务已经连通，但 persona 卡片还没生成完成。导入完成后，Afterglow 才能更稳定地模仿对方语气和人格。
+          readyForChat: 远端服务已经具备基础 persona / memory 条件，接下来把聊天 provider 切到 Afterglow 就可以开始验证语气是否生效。
+      continuity:
+        title: 连续性层
+        fields:
+          enabled:
+            label: 启用 Afterglow continuity
+            description: 在检索式记忆之外，继续启用 AIRI 当前的 continuity 层来表达 presence、residue、delay、silence。
+          allowDelay:
+            label: 允许延迟回应状态
+            description: 允许 continuity 层表达“稍后回你”的延迟感。
+          allowSilence:
+            label: 允许沉默状态
+            description: 允许 continuity 层表达结束语境下的沉默与收束。
+          bootstrapOnChatImport:
+            label: 导入聊天记录后自动 bootstrap
+            description: 导入 AIRI 本地聊天会话后，继续允许 continuity 从最近消息恢复舞台状态。
+          includeAssistantMessages:
+            label: 将 AIRI 回复也纳入 continuity
+            description: continuity bootstrap 时，除了用户消息外也把 AIRI 回复纳入最近上下文。
+          bootstrapRecentMessages:
+            label: continuity bootstrap 最近消息数
+            description: 控制 continuity 恢复时会看最近几条消息。
+            value: 最近 {count} 条
+      status:
+        title: 当前接入状态
+        ready: 已就绪
+        incomplete: 未完成
+        notSelected: 未选择
+        connection: 服务连接：{status}
+        identity: 导入身份：{status}
+        remoteConfig: 后端 persona 配置：{status}
+        chatProvider: 当前聊天 provider：{provider}
+        chatModel: 当前聊天 model：{model}
+        remoteChatModel: 远端聊天模型：{model}
+        remoteEmbeddingModel: 远端向量模型：{model}
+        configWizard: 后端配置向导：{status}
+        personaReady: persona 卡片：{status}
+        friendMessages: friend_messages：{count}
+        responsePairs: response_pairs：{count}
+        relationshipMemories: relationship_memories：{count}
+        chatRoutingHint: 当前只要你把聊天 provider 切到 Afterglow，AIRI 的对话请求就会直接打到这个外部后端。
+        chatProviderActive: 当前聊天已经切到 Afterglow，后续对话会直接消费这里导入的 persona 和记忆检索结果。
+        chatProviderInactive: 当前聊天还没有切到 Afterglow。即使导入完成，主聊天也不会使用这套 persona，先去切换 provider。
+      actions:
+        checkService: 检查 Afterglow 服务
+        inspectImport: 识别聊天文件
+        startImport: 启动导入
+        openChatProvider: 打开聊天 provider 设置
+        reset: 重置 Afterglow Memory 配置
   data:
     title: Data
     description: 管理存储 AIRI 数据、导出和重置

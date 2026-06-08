@@ -1,4 +1,6 @@
 export * from './airi-card'
+export * from './afterglowContinuity'
+export * from './afterglowMemory'
 export * from './characterRuntime'
 export * from './consciousness'
 export * from './discord'

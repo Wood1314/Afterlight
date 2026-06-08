@@ -3,7 +3,7 @@ import type { ChatSessionsExport } from '../types/chat-session'
 import { isStageTamagotchi } from '@proj-airi/stage-shared'
 import { useLive2dParams, useSettingsLive2d } from '@proj-airi/stage-ui-live2d'
 import { useModelStore } from '@proj-airi/stage-ui-three'
-
+import { convertTrainingConversationsToChatSessionsExport } from '../libs/afterglow/trainingConversationImport'
 import { useChatOrchestratorStore } from '../stores/chat'
 import { useChatSessionStore } from '../stores/chat/session-store'
 import { useDisplayModelsStore } from '../stores/display-models'
@@ -14,6 +14,7 @@ import { useDiscordStore } from '../stores/modules/discord'
 import { useFactorioStore } from '../stores/modules/gaming-factorio'
 import { useMinecraftStore } from '../stores/modules/gaming-minecraft'
 import { useHearingStore } from '../stores/modules/hearing'
+import { useAfterglowContinuityStore } from '../stores/modules/afterglowContinuity'
 import { useSpeechStore } from '../stores/modules/speech'
 import { useTwitterStore } from '../stores/modules/twitter'
 import { useOnboardingStore } from '../stores/onboarding'
@@ -33,6 +34,7 @@ export function useDataMaintenance() {
   const hearingStore = useHearingStore()
   const speechStore = useSpeechStore()
   const consciousnessStore = useConsciousnessStore()
+  const afterglowContinuityStore = useAfterglowContinuityStore()
   const twitterStore = useTwitterStore()
   const discordStore = useDiscordStore()
   const factorioStore = useFactorioStore()
@@ -55,6 +57,7 @@ export function useDataMaintenance() {
     hearingStore.resetState()
     speechStore.resetState()
     consciousnessStore.resetState()
+    afterglowContinuityStore.resetState()
     twitterStore.resetState()
     discordStore.resetState()
     factorioStore.resetState()
@@ -77,10 +80,42 @@ export function useDataMaintenance() {
     return (payload as { format?: string }).format === 'chat-sessions-index:v1'
   }
 
-  async function importChatSessions(payload: Record<string, unknown>) {
-    if (!isChatSessionsPayload(payload))
-      throw new Error('Invalid chat session export format')
-    await chatStore.importSessions(payload)
+  function normalizeImportedChatSessionsPayload(payload: unknown): ChatSessionsExport {
+    if (isChatSessionsPayload(payload))
+      return payload
+
+    const converted = convertTrainingConversationsToChatSessionsExport(payload, {
+      characterId: airiCardStore.activeCardId || 'default',
+    })
+    if (converted)
+      return converted.sessionsExport
+
+    throw new Error('Invalid chat session export format')
+  }
+
+  function bootstrapAfterglowContinuityFromImport(payload: ChatSessionsExport) {
+    if (consciousnessStore.activeProvider !== 'afterglow' || !afterglowContinuityStore.enabled) {
+      return
+    }
+
+    const activeSessionId = payload.index.characters[airiCardStore.activeCardId || 'default']?.activeSessionId
+    if (!activeSessionId) {
+      return
+    }
+
+    const activeSession = payload.sessions[activeSessionId]
+    if (!activeSession?.messages?.length) {
+      return
+    }
+  }
+
+  async function importChatSessions(payload: Record<string, unknown>, options?: { bootstrapAfterglow?: boolean }) {
+    const normalizedPayload = normalizeImportedChatSessionsPayload(payload)
+    await chatStore.importSessions(normalizedPayload)
+
+    if (afterglowContinuityStore.bootstrapOnChatImport.value && options?.bootstrapAfterglow !== false) {
+      bootstrapAfterglowContinuityFromImport(normalizedPayload)
+    }
   }
 
   async function resetSettingsState() {

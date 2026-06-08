@@ -32,9 +32,15 @@ export const useLLM = defineStore('llm', () => {
   const contentArrayCompatibility = ref<Map<string, boolean>>(new Map())
   const modsServerChannelStore = useModsServerChannelStore()
   const llmToolsStore = useLlmToolsStore()
+  const debugLlmLog = import.meta.env.DEV ? console.log.bind(console, '[llm-stream]') : () => {}
 
   async function stream(model: string, chatProvider: ChatProvider, messages: Message[], options?: StreamOptions) {
     const key = modelKey(model, chatProvider)
+    debugLlmLog('start', {
+      key,
+      model,
+      messageCount: messages.length,
+    })
     // TODO(@nekomeowww,@shinohara-rin): we should not register the command callback on every stream anyway...
     const sendSparkCommand = (command: WebSocketEvents['spark:command']) => {
       // TODO(@nekomeowww): instruct the LLM to understand what destination is.
@@ -80,8 +86,17 @@ export const useLLM = defineStore('llm', () => {
 
     try {
       await runStream()
+      debugLlmLog('success', {
+        key,
+        model,
+      })
     }
     catch (err) {
+      debugLlmLog('error', {
+        key,
+        model,
+        message: err instanceof Error ? err.message : String(err),
+      })
       if (isToolRelatedError(err)) {
         console.warn(`[llm] Auto-disabling tools for "${key}" due to tool-related error`)
         toolsCompatibility.value.set(key, false)

@@ -17,18 +17,30 @@ export const useConsciousnessStore = defineStore('consciousness', () => {
 
   // Computed properties
   const supportsModelListing = computed(() => {
+    if (!activeProvider.value)
+      return false
+
     return providersStore.getProviderMetadata(activeProvider.value)?.capabilities.listModels !== undefined
   })
 
   const providerModels = computed(() => {
+    if (!activeProvider.value)
+      return []
+
     return providersStore.getModelsForProvider(activeProvider.value)
   })
 
   const isLoadingActiveProviderModels = computed(() => {
+    if (!activeProvider.value)
+      return false
+
     return providersStore.isLoadingModels[activeProvider.value] || false
   })
 
   const activeProviderModelError = computed(() => {
+    if (!activeProvider.value)
+      return null
+
     return providersStore.modelLoadError[activeProvider.value] || null
   })
 

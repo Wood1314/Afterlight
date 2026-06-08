@@ -23,6 +23,12 @@ lerna-debug.log*
 *.local
 # e.g. Claude Code settings.local.json
 *.local.*
+.env
+.env.*
+!.env.example
+!.env.*.example
+*_train.json
+*.airi-import.json
 
 # Audio binaries
 *.pcm

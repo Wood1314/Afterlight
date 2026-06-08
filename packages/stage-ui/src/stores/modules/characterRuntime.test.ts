@@ -50,4 +50,29 @@ describe('useCharacterRuntimeStore', () => {
     ])
     expect(store.renderModel.delay).toMatchObject({ seconds: 2 })
   })
+
+  /**
+   * @example
+   * const store = useCharacterRuntimeStore()
+   * store.replaceSignals([...], { turnId: 'imported-turn' })
+   */
+  it('can replace runtime signals for imported continuity bootstrap', () => {
+    const store = useCharacterRuntimeStore()
+
+    store.replaceSignals([
+      {
+        type: 'presence-cue',
+        turnId: 'imported-turn',
+        cue: 'returning',
+        intensity: 'noticeable',
+        text: 'She recognizes the thread immediately.',
+      },
+    ], { turnId: 'imported-turn' })
+
+    expect(store.currentTurnId).toBe('imported-turn')
+    expect(store.signals).toHaveLength(1)
+    expect(store.renderModel.presenceCue).toMatchObject({
+      cue: 'returning',
+    })
+  })
 })

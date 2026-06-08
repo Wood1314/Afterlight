@@ -13,8 +13,6 @@ import { ref, toRaw, watch } from 'vue'
 import { useAnalytics } from '../composables'
 import { activeTurnSpan, startSpan } from '../composables/use-io-tracer'
 import { extractMessageText, isCloudSyncableMessage } from '../libs/chat-sync'
-import { adaptCharacterRuntime } from '../libs/character-runtime/adapter'
-import { buildAfterglowContinuityPayload } from '../libs/providers/providers/afterglow'
 import { createMinecraftContext } from './chat/context-providers'
 import { useChatContextStore } from './chat/context-store'
 import { useChatSessionStore } from './chat/session-store'
@@ -235,13 +233,6 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
   ) {
     const turnId = nanoid()
     characterRuntime.beginTurn(turnId)
-
-    if (activeProvider.value === 'afterglow') {
-      characterRuntime.applySignals(adaptCharacterRuntime(buildAfterglowContinuityPayload({
-        turnId,
-        userText: sendingMessage,
-      })))
-    }
 
     return runtime.ingest(sendingMessage, options, targetSessionId)
   }

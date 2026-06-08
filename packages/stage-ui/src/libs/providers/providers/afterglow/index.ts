@@ -5,25 +5,34 @@ import { ProviderValidationCheck } from '../../types'
 import { createOpenAICompatibleValidators } from '../../validators'
 import { defineProvider } from '../registry'
 
+const AFTERGLOW_DEFAULT_BASE_URL = 'http://127.0.0.1:8000/'
+const AFTERGLOW_DEFAULT_MODEL = 'afterglow-companion'
+
+function readAfterglowEnv(name: 'AFTERGLOW_API_KEY' | 'AFTERGLOW_BASE_URL' | 'AFTERGLOW_MODEL') {
+  const value = import.meta.env[name]
+
+  return typeof value === 'string' ? value.trim() : ''
+}
+
 const afterglowConfigSchema = z.object({
   apiKey: z
     .string('API Key')
     .optional()
-    .default('sk-faad2f5dd0b74871ad2991ba9634b863'),
+    .default(readAfterglowEnv('AFTERGLOW_API_KEY')),
   baseUrl: z
     .string('Base URL')
     .optional()
-    .default('https://api.deepseek.com/'),
+    .default(readAfterglowEnv('AFTERGLOW_BASE_URL') || AFTERGLOW_DEFAULT_BASE_URL),
 })
 
 type AfterglowConfig = z.input<typeof afterglowConfigSchema>
 
 const afterglowModels = [
   {
-    id: 'deepseek-v4-flash',
-    name: 'deepseek-v4-flash',
+    id: readAfterglowEnv('AFTERGLOW_MODEL') || AFTERGLOW_DEFAULT_MODEL,
+    name: readAfterglowEnv('AFTERGLOW_MODEL') || AFTERGLOW_DEFAULT_MODEL,
     provider: 'afterglow',
-    description: 'Phase 1 default model for AIRI character runtime experimentation.',
+    description: 'External Afterglow backend model slot for persona + memory driven replies.',
   },
 ]
 
@@ -32,8 +41,8 @@ export const providerAfterglow = defineProvider<AfterglowConfig>({
   order: 3,
   name: 'Afterglow',
   nameLocalize: () => 'Afterglow',
-  description: 'AIRI continuity-brain provider boundary for character runtime experiments.',
-  descriptionLocalize: () => 'AIRI continuity-brain provider boundary for character runtime experiments.',
+  description: 'External Afterglow backend for imported chat memory, persona, retrieval, and continuity-driven replies.',
+  descriptionLocalize: () => 'External Afterglow backend for imported chat memory, persona, retrieval, and continuity-driven replies.',
   tasks: ['chat'],
   icon: 'i-lobe-icons:deepseek',
   iconColor: 'i-lobe-icons:deepseek-color',
@@ -41,13 +50,13 @@ export const providerAfterglow = defineProvider<AfterglowConfig>({
   createProviderConfig: ({ t }) => afterglowConfigSchema.extend({
     apiKey: afterglowConfigSchema.shape.apiKey.meta({
       labelLocalized: t('settings.pages.providers.catalog.edit.config.common.fields.field.api-key.label'),
-      descriptionLocalized: 'Credential used for the current Afterglow experiment backend.',
+      descriptionLocalized: 'API key for the external Afterglow backend. Keep it local-only.',
       placeholderLocalized: t('settings.pages.providers.catalog.edit.config.common.fields.field.api-key.placeholder'),
       type: 'password',
     }),
     baseUrl: afterglowConfigSchema.shape.baseUrl.meta({
       labelLocalized: t('settings.pages.providers.catalog.edit.config.common.fields.field.base-url.label'),
-      descriptionLocalized: 'OpenAI-compatible endpoint used by the current Afterglow experiment backend.',
+      descriptionLocalized: 'OpenAI-compatible base URL exposed by the external Afterglow backend, usually http://127.0.0.1:8000/.',
       placeholderLocalized: t('settings.pages.providers.catalog.edit.config.common.fields.field.base-url.placeholder'),
     }),
   }),
@@ -56,17 +65,17 @@ export const providerAfterglow = defineProvider<AfterglowConfig>({
       key: 'apiKey',
       type: 'password',
       label: 'API Key',
-      description: 'Defaults to the current phase 1 experiment key.',
+      description: 'API key for the external Afterglow backend. Read from local .env / .env.local only.',
       required: true,
-      defaultValue: 'sk-faad2f5dd0b74871ad2991ba9634b863',
+      defaultValue: '',
     },
     {
       key: 'baseUrl',
       type: 'text',
       label: 'Base URL',
-      description: 'Defaults to the current phase 1 experiment endpoint.',
+      description: 'Local Afterglow backend endpoint, usually http://127.0.0.1:8000/.',
       required: true,
-      defaultValue: 'https://api.deepseek.com/',
+      defaultValue: AFTERGLOW_DEFAULT_BASE_URL,
     },
   ],
   createProvider(config) {
@@ -99,10 +108,15 @@ export const providerAfterglow = defineProvider<AfterglowConfig>({
  * Returns:
  * - A provider-local shape ready for `adaptCharacterRuntime()`
  */
-export function buildAfterglowContinuityPayload(input: { turnId: string, userText: string }) {
+export function buildAfterglowContinuityPayload(
+  input: { turnId: string, userText: string },
+  options?: { allowDelay?: boolean, allowSilence?: boolean },
+) {
   const normalized = input.userText.toLowerCase()
+  const allowSilence = options?.allowSilence !== false
+  const allowDelay = options?.allowDelay !== false
 
-  if (normalized.includes('晚安') || normalized.includes('good night')) {
+  if (allowSilence && (normalized.includes('晚安') || normalized.includes('good night'))) {
     return {
       turnId: input.turnId,
       replyText: '',
@@ -123,7 +137,7 @@ export function buildAfterglowContinuityPayload(input: { turnId: string, userTex
     }
   }
 
-  if (normalized.includes('等') || normalized.includes('later') || normalized.includes('稍等')) {
+  if (allowDelay && (normalized.includes('等') || normalized.includes('later') || normalized.includes('稍等'))) {
     return {
       turnId: input.turnId,
       replyText: '',

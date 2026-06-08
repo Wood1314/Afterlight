@@ -1,388 +1,323 @@
-<picture>
-  <source
-    srcset="./docs/content/public/banner-dark-1280x640.avif"
-    media="(prefers-color-scheme: dark)"
-  />
-  <source
-    srcset="./docs/content/public/banner-light-1280x640.avif"
-    media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
-  />
-  <img alt="Project AIRI banner" src="./docs/content/public/banner-light-1280x640.avif" />
-</picture>
+# Afterlight
 
-<h1 align="center">Project AIRI</h1>
+这是一个用于构建和运行 AIRI 的多应用 monorepo。AIRI 是一个由大语言模型驱动的虚拟角色系统，覆盖 Web、桌面端、移动端，以及配套的共享运行时、UI 组件、插件和服务。
 
-<p align="center">
-  A cross-platform AI character runtime for browser, desktop, and mobile.
-</p>
+当前这个仓库主要承担两类职责：
 
-<p align="center">
-  <a href="https://airi.moeru.ai">Website</a> ·
-  <a href="https://github.com/moeru-ai/airi/blob/main/docs/README.zh-CN.md">简体中文</a> ·
-  <a href="https://github.com/moeru-ai/airi/blob/main/docs/README.ja-JP.md">日本語</a> ·
-  <a href="https://github.com/moeru-ai/airi/blob/main/docs/README.ru-RU.md">Русский</a> ·
-  <a href="https://github.com/moeru-ai/airi/blob/main/docs/README.vi.md">Tiếng Việt</a> ·
-  <a href="https://github.com/moeru-ai/airi/blob/main/docs/README.fr.md">Français</a> ·
-  <a href="https://github.com/moeru-ai/airi/blob/main/docs/README.ko-KR.md">한국어</a>
-</p>
+- AIRI 主产品工作区
+- 外部系统接入层，例如 Afterglow、模型提供商、插件和服务运行时
 
-<p align="center">
-  <a href="https://github.com/moeru-ai/airi/blob/main/LICENSE"><img src="https://img.shields.io/github/license/moeru-ai/airi.svg?style=flat&colorA=080f12&colorB=1fa669" alt="License"></a>
-  <a href="https://discord.gg/TgQ3Cu2F7A"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://x.com/proj_airi"><img src="https://img.shields.io/badge/X-%40proj__airi-black?logo=x" alt="X"></a>
-  <a href="https://trendshift.io/repositories/14636" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14636" alt="Trendshift" /></a>
-</p>
-
-## What AIRI Is
-
-AIRI is not just a chat UI. It is a **character runtime**:
-
-- a brain that can chat, reason, and use tools
-- a body that can render Live2D, VRM, and Spine characters
-- ears and mouth for speech input/output
-- a stage that can feel like a living presence instead of a plain message window
-
-The project is built as a monorepo so the same runtime ideas can ship across:
-
-- `stage-web`: browser / PWA
-- `stage-tamagotchi`: desktop Electron app
-- `stage-pocket`: mobile shell
-
-## Visual Overview
-
-<p align="center">
-  <img src="./docs/content/public/assets/screenshot-ui.avif" alt="AIRI UI overview" width="47%" />
-  <img src="./docs/content/public/assets/screenshot-chat.avif" alt="AIRI chat scene" width="47%" />
-</p>
-
-<p align="center">
-  <img src="./docs/content/public/assets/screenshot-window-mode.avif" alt="AIRI window mode" width="47%" />
-  <img src="./docs/content/public/assets/screenshot-system-tray.avif" alt="AIRI system tray integration" width="47%" />
-</p>
-
-## Why This Repo Matters
-
-Most AI companion projects stop at:
-
-- chat
-- character cards
-- roleplay
-- a single app surface
-
-AIRI pushes toward a fuller runtime:
-
-- multi-surface character embodiment
-- tool use and game-playing hooks
-- speech pipelines
-- local and remote provider flexibility
-- stage-aware rendering and pacing
-- a shared runtime core across browser, desktop, and mobile
-
-That is the difference between “an assistant with a face” and “a persistent digital character.”
-
-## Current Direction
-
-The repo is actively evolving toward a stronger **character presence** model.
-
-Recent architecture work in this repo now treats AIRI as:
-
-- the canonical shell and runtime owner
-- the stage and presence renderer
-- the timeline and character-state owner
-
-This direction matters because AIRI is increasingly optimized around:
-
-- presence cue
-- residue
-- delayed reply
-- intentional silence
-- continuity across returns
-
-Instead of only optimizing for better text generation.
-
-## Project Structure
-
-### Apps
-
-- `apps/stage-web`: web app and PWA surface
-- `apps/stage-tamagotchi`: desktop Electron app
-- `apps/stage-pocket`: mobile app shell
-- `apps/server`: backend and server-side services
-
-### Core shared packages
-
-- `packages/stage-ui`: shared stage business logic, stores, components
-- `packages/stage-shared`: shared runtime helpers and contracts
-- `packages/ui`: lower-level reusable UI primitives
-- `packages/core-agent`: chat/runtime orchestration core
-- `packages/pipelines-audio`: audio and speech pipeline infrastructure
-- `packages/i18n`: translations and locale resources
-
-### Rendering / model packages
-
-- `packages/stage-ui-live2d`
-- `packages/stage-ui-three`
-- `packages/stage-ui-spine`
-- `packages/model-driver-lipsync`
-
-## Architecture Snapshot
+## 总览流程图
 
 ```mermaid
-flowchart LR
-  User[User Input]
-  Stage[Stage Runtime]
-  Chat[Chat Orchestrator]
-  Agent[Core Agent]
-  Providers[LLM / TTS / STT Providers]
-  Speech[Speech Pipeline]
-  Character[Character Runtime]
-  Models[Live2D / VRM / Spine]
+flowchart TD
+  A["Afterlight"] --> B["应用层 apps"]
+  A --> C["共享能力 packages"]
+  A --> D["服务层 services"]
+  A --> E["插件与集成 plugins / integrations"]
+  A --> F["文档与脚本 docs / scripts"]
 
-  User --> Stage
-  Stage --> Chat
-  Chat --> Agent
-  Agent --> Providers
-  Agent --> Character
-  Character --> Stage
-  Stage --> Speech
-  Speech --> Models
+  B --> B1["stage-web"]
+  B --> B2["stage-tamagotchi"]
+  B --> B3["stage-pocket"]
+  B --> B4["server / ui-server-auth"]
+
+  C --> C1["core-agent"]
+  C --> C2["stage-ui"]
+  C --> C3["stage-layouts / stage-pages"]
+  C --> C4["ui / i18n / stage-shared"]
+  C --> C5["server-runtime / sdk / schema"]
+
+  D --> D1["bots / MCP / runtime services"]
+  E --> E1["外部平台接入"]
+  F --> F1["开发文档与维护工具"]
 ```
 
-## Supported Surfaces
+## 仓库内容
 
-### Browser
+### 应用层
 
-- PWA support
-- stage runtime in browser
-- provider-driven chat and speech flows
+- `apps/stage-web`
+  AIRI 主 Web 应用，基于 Vue 3、Vite、Pinia、UnoCSS。
+- `apps/stage-tamagotchi`
+  AIRI 桌面端，基于 Electron。
+- `apps/stage-pocket`
+  AIRI 移动端，基于 Capacitor。
+- `apps/server`
+  AIRI 服务端应用入口。
+- `apps/ui-server-auth`
+  服务端认证相关 UI。
+- `apps/component-calling`
+  实时音频 / component-calling 相关实验应用。
 
-### Desktop
+### 共享包
 
-- Electron shell
-- tray integration
-- richer local integration paths
+- `packages/core-agent`
+  聊天编排核心运行时。
+- `packages/core-character`
+  角色行为与角色管线编排核心。
+- `packages/stage-ui`
+  AIRI 共享 UI、状态管理、Provider 接线、聊天流程和场景组件。
+- `packages/stage-layouts`
+  共享布局层。
+- `packages/stage-pages`
+  共享页面层。
+- `packages/stage-shared`
+  跨端共享协议、工具和辅助逻辑。
+- `packages/ui`
+  低层可复用 UI 基础组件。
+- `packages/i18n`
+  国际化和翻译资源。
+- `packages/server-runtime`、`packages/server-sdk`、`packages/server-shared`、`packages/server-schema`
+  服务端运行时和前后端共享协议。
+- `packages/stage-ui-live2d`、`packages/stage-ui-spine`、`packages/stage-ui-three`
+  不同角色渲染层的场景组件和运行时支持。
 
-### Mobile
+### 服务与集成
 
-- Capacitor-based shell
-- shared stage UI and stores
+- `services/*`
+  AIRI 相关长期运行服务，例如机器人和 MCP 服务。
+- `plugins/*`
+  AIRI 插件包。
+- `integrations/*`
+  外部系统集成代码。
 
-## Capabilities
+### 文档与工具
 
-### Brain
+- `docs`
+  项目文档与 AI 上下文文档。
+- `scripts`
+  仓库维护脚本和开发辅助脚本。
+- `turbo.json`
+  工作区任务编排配置。
+- `vitest.config.ts`
+  根测试配置。
 
-- chat with multiple providers
-- tool calling
-- game / environment integrations
-- context-aware runtime orchestration
+## 环境要求
 
-### Body
+- Node.js `24+`
+- `pnpm@10.33.0`
+- 已启用 Corepack
 
-- Live2D rendering
-- VRM rendering
-- Spine rendering
-- animations, lip sync, motion hooks
+推荐初始化方式：
 
-### Voice
-
-- speech input pipelines
-- speech output pipelines
-- multiple provider backends
-
-### Memory / state
-
-- browser-compatible local data paths
-- cloud/server sync layers
-- work-in-progress continuity and character state work
-
-## Screens and Downloads
-
-<p align="center">
-  <a href="https://github.com/moeru-ai/airi/releases/latest">
-    <picture>
-      <source
-        width="33%"
-        srcset="./docs/content/public/assets/download-buttons/download-buttons.windows.dark.en-US.avif"
-        media="(prefers-color-scheme: dark)"
-      />
-      <source
-        width="33%"
-        srcset="./docs/content/public/assets/download-buttons/download-buttons.windows.light.en-US.avif"
-        media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
-      />
-      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.windows.light.en-US.avif" alt="Download AIRI for Windows" />
-    </picture>
-  </a>
-  <a href="https://github.com/moeru-ai/airi/releases/latest">
-    <picture>
-      <source
-        width="33%"
-        srcset="./docs/content/public/assets/download-buttons/download-buttons.macos.dark.en-US.avif"
-        media="(prefers-color-scheme: dark)"
-      />
-      <source
-        width="33%"
-        srcset="./docs/content/public/assets/download-buttons/download-buttons.macos.light.en-US.avif"
-        media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
-      />
-      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.macos.light.en-US.avif" alt="Download AIRI for macOS" />
-    </picture>
-  </a>
-  <a href="https://github.com/moeru-ai/airi/releases/latest">
-    <picture>
-      <source
-        width="33%"
-        srcset="./docs/content/public/assets/download-buttons/download-buttons.linux.dark.en-US.avif"
-        media="(prefers-color-scheme: dark)"
-      />
-      <source
-        width="33%"
-        srcset="./docs/content/public/assets/download-buttons/download-buttons.linux.light.en-US.avif"
-        media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
-      />
-      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.linux.light.en-US.avif" alt="Download AIRI for Linux" />
-    </picture>
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://airi.moeru.ai">
-    <picture>
-      <source
-        width="33%"
-        srcset="./docs/content/public/assets/QR%20code%20button/section.cards.qrcode.dark.en-US.png"
-        media="(prefers-color-scheme: dark)"
-      />
-      <source
-        width="33%"
-        srcset="./docs/content/public/assets/QR%20code%20button/section.cards.qrcode.light.en-US.png"
-        media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
-      />
-      <img width="33%" src="./docs/content/public/assets/QR%20code%20button/section.cards.qrcode.light.en-US.png" alt="Open AIRI QR code" />
-    </picture>
-  </a>
-  <a href="https://airi.moeru.ai">
-    <picture>
-      <source
-        width="33%"
-        srcset="./docs/content/public/assets/download-buttons/download-buttons.mobile.dark.en-US.avif"
-        media="(prefers-color-scheme: dark)"
-      />
-      <source
-        width="33%"
-        srcset="./docs/content/public/assets/download-buttons/download-buttons.mobile.light.en-US.avif"
-        media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
-      />
-      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.mobile.light.en-US.avif" alt="Use AIRI on mobile" />
-    </picture>
-  </a>
-  <a href="https://airi.moeru.ai">
-    <picture>
-      <source
-        width="33%"
-        srcset="./docs/content/public/assets/download-buttons/download-buttons.browser.dark.en-US.png"
-        media="(prefers-color-scheme: dark)"
-      />
-      <source
-        width="33%"
-        srcset="./docs/content/public/assets/download-buttons/download-buttons.browser.light.en-US.png"
-        media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
-      />
-      <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.browser.light.en-US.png" alt="Use AIRI in browser" />
-    </picture>
-  </a>
-</p>
-
-## Quick Start
-
-### Requirements
-
-- Node.js
-- pnpm
-- modern browser or desktop environment depending on your target
-
-### Install
-
-```sh
+```bash
+corepack enable
+corepack prepare pnpm@10.33.0 --activate
 pnpm install
 ```
 
-### Run the web stage
+## 常用命令
 
-```sh
-pnpm dev
+### 开发流程图
+
+```mermaid
+flowchart LR
+  A["pnpm install"] --> B{"开发目标"}
+  B --> C["Web<br/>pnpm dev:web"]
+  B --> D["桌面端<br/>pnpm dev:tamagotchi"]
+  B --> E["移动端<br/>pnpm dev:pocket:ios / android"]
+  B --> F["服务端<br/>pnpm dev:server"]
+
+  C --> G["修改代码"]
+  D --> G
+  E --> G
+  F --> G
+
+  G --> H["pnpm typecheck"]
+  H --> I["pnpm test:run"]
+  I --> J["pnpm lint"]
 ```
 
-### Run the desktop app
+### 开发
 
-```sh
+启动 Web 应用：
+
+```bash
+pnpm dev:web
+```
+
+启动桌面端：
+
+```bash
 pnpm dev:tamagotchi
 ```
 
-### Run the docs site
+启动移动端开发流程：
 
-```sh
-pnpm dev:docs
-```
-
-## Useful Commands
-
-```sh
-pnpm dev
-pnpm dev:tamagotchi
+```bash
 pnpm dev:pocket:ios
+pnpm dev:pocket:android
+```
+
+并行启动所有应用开发任务：
+
+```bash
+pnpm dev:apps
+```
+
+### 构建
+
+构建主要应用和包：
+
+```bash
 pnpm build
-pnpm test:run
-pnpm lint
+```
+
+只构建 Web：
+
+```bash
+pnpm build:web
+```
+
+只构建桌面端：
+
+```bash
+pnpm build:tamagotchi
+```
+
+### 质量检查
+
+运行类型检查：
+
+```bash
 pnpm typecheck
 ```
 
-## Provider Support
+运行测试：
 
-AIRI supports a broad provider surface through `xsai` and related packages, including:
+```bash
+pnpm test:run
+```
 
-- OpenAI
-- Anthropic
-- DeepSeek
-- Google Gemini
-- Groq
-- Mistral
-- Ollama
-- OpenRouter
-- Together
-- Fireworks
-- Cloudflare Workers AI
-- and many more already wired in `packages/stage-ui/src/libs/providers/providers`
+运行 lint：
 
-## Related Projects
+```bash
+pnpm lint
+```
 
-- [`unspeech`](https://github.com/moeru-ai/unspeech): unified speech proxy / endpoint layer
-- [`@proj-airi/drizzle-duckdb-wasm`](https://github.com/moeru-ai/airi/tree/main/packages/drizzle-duckdb-wasm/README.md)
-- [`@proj-airi/duckdb-wasm`](https://github.com/moeru-ai/airi/tree/main/packages/duckdb-wasm/README.md)
-- [AIRI Factorio](https://github.com/moeru-ai/airi-factorio)
-- [MCP Launcher](https://github.com/moeru-ai/mcp-launcher)
-- [Awesome AI VTuber](https://github.com/proj-airi/awesome-ai-vtuber)
+自动修复 lint / 格式问题：
 
-## Community
+```bash
+pnpm lint:fix
+```
 
-- Discord: <https://discord.gg/TgQ3Cu2F7A>
-- X: <https://x.com/proj_airi>
-- Telegram: <https://t.me/+7M_ZKO3zUHFlOThh>
-- WeChat: [wechat.md](./docs/wechat.md)
+## Afterglow 集成
 
-## Notes
+AIRI 目前支持将 Afterglow 作为外部记忆与连续性后端来使用。
 
-> [!WARNING]
-> This project does **not** have an official token or cryptocurrency.
+当前接入方式是：
 
-> [!TIP]
-> Translation contributions are welcome on [Crowdin](https://crowdin.com/project/proj-airi).
+- AIRI 负责产品外壳、聊天 UI、设置页、场景运行时和整体编排
+- Afterglow 负责聊天记录导入、向量检索、关系连续性和基于记忆的回复生成
 
-> [!NOTE]
-> AIRI is an active monorepo. If you are contributing to runtime, rendering, speech, infra, design, or character systems, read [AGENTS.md](./AGENTS.md) and the docs under `docs/` before making broad changes.
+### Afterglow 接入流程图
 
-## Supporters
+```mermaid
+flowchart TD
+  U["用户"] --> A["Afterlight 设置页"]
+  A --> B["Settings -> Memory<br/>配置 Afterglow 地址 / API Key"]
+  B --> C["导入聊天记录 JSON"]
+  C --> D["Afterglow ingestion"]
+  D --> E["文本清洗 / 切分 / embedding"]
+  E --> F["LanceDB"]
+  F --> F1["response_pairs"]
+  F --> F2["friend_messages"]
+  F --> F3["dialogue_windows"]
+  F --> F4["live_messages"]
 
-<p align="center">
-  <img src="./docs/content/public/assets/sponsors/sponsors.svg" alt="Project AIRI supporters" />
-</p>
+  U --> G["切换聊天 Provider 为 Afterglow"]
+  G --> H["Afterlight 聊天输入"]
+  H --> I["core-agent / stage-ui 编排层"]
+  I --> J["调用 Afterglow /chat/completions"]
+  J --> K["Afterglow 检索器"]
+  K --> F1
+  K --> F2
+  K --> F3
+  K --> F4
+  K --> L["relationship memory / life state"]
+  K --> M["融合检索结果"]
+  M --> N["主模型生成回复"]
+  N --> O["Afterlight 聊天界面展示自然回复"]
+  N --> P["writeback 回写 live_messages"]
+  P --> F4
+```
+
+### 真实验收流程图
+
+```mermaid
+flowchart TD
+  A["浏览器打开 Afterlight"] --> B["确认 Provider = Afterglow"]
+  B --> C["Memory 中已完成导入"]
+  C --> D["首页输入真实消息"]
+  D --> E["Afterglow 收到 /chat/completions"]
+  E --> F["检索命中 response_pairs / friend_messages / dialogue_windows / live_messages"]
+  F --> G["主模型生成回复"]
+  G --> H["页面显示自然回复"]
+  H --> I["检查 debug/stats / model_chain / writeback"]
+  I --> J["确认没有暴露检索元信息"]
+```
+
+### AIRI 侧对 Afterglow 的要求
+
+至少需要满足：
+
+- 可访问的 Afterglow 服务地址
+- AIRI 可调用的 API Key
+- 可用的聊天接口
+- 如果你希望记忆参与回复，还需要已导入的聊天数据
+
+### 在 AIRI 中的配置方式
+
+1. 启动外部 Afterglow 后端。
+2. 打开 AIRI 的 `设置 -> Memory`。
+3. 配置：
+   - Afterglow 服务地址
+   - Afterglow API Key
+4. 在 Memory 页面导入支持的训练 / 聊天记录 JSON。
+5. 在 Provider / Consciousness 相关设置中把当前聊天 Provider 切换为 `Afterglow`。
+
+### 说明
+
+- Afterglow 在这个仓库里被视为外部服务，不是仓库内置后端。
+- 本地密钥和敏感配置必须保存在本地环境或本地配置文件里，不能提交到仓库。
+- 如果导入后记忆计数没有变化，优先检查外部 Afterglow 后端。
+- 如果回复没有体现记忆效果，优先确认：
+  - AIRI 当前是否真的切到了 `Afterglow` Provider
+  - 外部 Afterglow 后端是否能在运行时读到导入后的向量数据
+
+## 工作区约定
+
+- 优先使用 `pnpm` workspace filter 跑定向任务。
+- 可复用共享逻辑应尽量放在 `packages/`，而不是散落在各个应用里重复实现。
+- AIRI 主要产品逻辑通常集中在：
+  - `packages/stage-ui`
+  - `packages/stage-layouts`
+  - `packages/stage-pages`
+- 根目录 `README.md` 只是总览。具体改动某个子系统时，应该继续阅读对应 app/package 下的本地文档。
+
+## 测试与验证
+
+这个仓库大量使用 Vitest。实际开发时建议：
+
+- 改动哪个模块，就优先跑对应模块的定向测试
+- 完成任务后至少跑 typecheck 和 lint
+- 遇到浏览器 / UI 问题时，除了单元测试，也应做真实浏览器验证
+
+示例：
+
+```bash
+pnpm exec vitest run packages/core-agent/src/runtime/llm-service.test.ts
+pnpm -F @proj-airi/stage-ui typecheck
+pnpm -F @proj-airi/stage-layouts typecheck
+```
+
+## 安全说明
+
+- 不要提交 API Key、本地 Token、个人聊天记录或其他敏感数据。
+- 导入的聊天记录和外部记忆后端通常包含高度敏感的个人信息。
+- 即使你已经把密钥从当前文件删除，Git 历史中仍可能保留它。
+
+## 许可证
+
+除非某个子项目另有说明，本仓库采用 MIT License。详见 [LICENSE](/Users/pangxiao/Tools/Afterlight/LICENSE)。

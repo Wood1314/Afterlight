@@ -68,6 +68,17 @@ export const useCharacterRuntimeStore = defineStore('modules:character-runtime',
     timeline.value = []
   }
 
+  function replaceSignals(nextSignals: CharacterSignal[], options?: { turnId?: string | null }) {
+    currentTurnId.value = options?.turnId ?? null
+    signals.value = [...nextSignals]
+    timeline.value = nextSignals.map(signal => ({
+      kind: 'signal' as const,
+      turnId: signal.turnId,
+      at: Date.now(),
+      signal,
+    }))
+  }
+
   const snapshot = computed<CharacterRuntimeSnapshot>(() => ({
     currentTurnId: currentTurnId.value,
     signals: signals.value,
@@ -84,6 +95,7 @@ export const useCharacterRuntimeStore = defineStore('modules:character-runtime',
     nonBlockingSignals,
     beginTurn,
     applySignals,
+    replaceSignals,
     recordReplyText,
     clearActiveTurn,
     resetState,

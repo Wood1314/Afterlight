@@ -18,7 +18,7 @@ import { streamText } from '@xsai/stream-text'
  *
  * Expects:
  * - `role: 'error'` entries (AIRI-internal markers from the chat UI). They are
- *   rewritten as user-role narrations so the provider doesn't reject them.
+ *   filtered out so local transport failures never pollute the next model turn.
  * - `content` may be a string, a content-part array, or undefined.
  *
  * Returns:
@@ -33,13 +33,9 @@ import { streamText } from '@xsai/stream-text'
  *   providers.
  */
 export function sanitizeMessages(messages: unknown[], supportsContentArray: boolean = true): Message[] {
-  return messages.map((message: any) => {
-    if (message && message.role === 'error') {
-      return {
-        role: 'user',
-        content: `User encountered error: ${String(message.content ?? '')}`,
-      } as Message
-    }
+  return messages.flatMap((message: any) => {
+    if (message && message.role === 'error')
+      return []
 
     // NOTICE:
     // Flatten array content for providers (e.g. DeepSeek and other Rust/serde-
@@ -62,11 +58,11 @@ export function sanitizeMessages(messages: unknown[], supportsContentArray: bool
       // model. When it doesn't, flatten unconditionally; non-text parts are
       // dropped because the provider can't carry them anyway.
       if (!supportsContentArray || !hasNonTextPart) {
-        return { ...message, content: contentParts.map(part => part?.text ?? '').join('') } as Message
+        return [{ ...message, content: contentParts.map(part => part?.text ?? '').join('') } as Message]
       }
     }
 
-    return message as Message
+    return [message as Message]
   })
 }
 

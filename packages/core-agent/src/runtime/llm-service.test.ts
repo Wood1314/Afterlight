@@ -113,16 +113,14 @@ describe('streamFrom tool error capture', () => {
 })
 
 describe('sanitizeMessages', () => {
-  it('rewrites internal `error`-role messages as user-role narrations', () => {
+  it('drops internal `error`-role messages from provider history', () => {
     /**
      * @example
      * sanitizeMessages([{ role: 'error', content: 'Remote sent 400' }])
-     * // -> [{ role: 'user', content: 'User encountered error: Remote sent 400' }]
+     * // -> []
      */
     const out = sanitizeMessages([{ role: 'error', content: 'Remote sent 400' }])
-    expect(out).toEqual([
-      { role: 'user', content: 'User encountered error: Remote sent 400' },
-    ])
+    expect(out).toEqual([])
   })
 
   it('flattens text-only content arrays to a string by default', () => {

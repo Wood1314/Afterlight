@@ -313,6 +313,37 @@ describe('chat orchestrator contract', () => {
     expect(syntheticContextText).toContain('- system:weather: sunny')
   })
 
+  it('keeps local error messages out of the next provider prompt', async () => {
+    sessionMessages['session-1'] = [
+      { role: 'system', content: 'system prompt', createdAt: 1, id: 'system' },
+      { role: 'user', content: '上一句', createdAt: 2, id: 'user-1' },
+      { role: 'error', content: 'Remote sent 404 response', createdAt: 3, id: 'error-1' },
+    ]
+
+    let composedMessages: Message[] = []
+    llmStreamMock.mockImplementation(async (_model: string, _chatProvider: ChatProvider, messages: Message[], options: any) => {
+      composedMessages = messages
+      await options.onStreamEvent({ type: 'text-delta', text: '收到啦' })
+      await options.onStreamEvent({ type: 'finish', finishReason: 'stop' })
+    })
+
+    const store = useChatOrchestratorStore()
+
+    await store.ingest('新的一句', {
+      chatProvider: provider,
+      model: 'model-a',
+      providerConfig: {},
+    })
+
+    expect(composedMessages.some(message => JSON.stringify(message).includes('Remote sent 404 response'))).toBe(false)
+    expect(composedMessages.some(message => JSON.stringify(message).includes('User encountered error'))).toBe(false)
+    expect(composedMessages).toMatchObject([
+      { role: 'system', content: expect.stringContaining('system prompt') },
+      { role: 'user' },
+      { role: 'user' },
+    ])
+  })
+
   it('emits special tokens for speech timeline handling during chat streaming', async () => {
     getContextsSnapshotMock.mockReturnValue({})
     llmStreamMock.mockImplementationOnce(async (_model, _provider, _messages, options) => {

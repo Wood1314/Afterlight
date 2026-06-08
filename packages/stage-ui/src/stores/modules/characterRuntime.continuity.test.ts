@@ -74,7 +74,6 @@ describe('character runtime continuity regression suite', () => {
         type: 'conversation-delivery',
         turnId: 'silence-turn',
         state: 'idle',
-        text: null,
       },
     ])
 
